@@ -238,3 +238,75 @@ describe("import validation", () => {
     assert.equal(summarizeAttempts(csv.rows).costPerAttempt, null);
   });
 });
+
+describe("quoted csv fields", () => {
+  it("keeps a quoted field that spans lines and flags the next record by its start line", () => {
+    const text = [
+      "run_id,timestamp,model,input_tokens,output_tokens,cost_usd,success,attempt_id",
+      '"run-1",2026-04-11T15:00:00Z,"line one',
+      '# not a comment',
+      'line two, still the model",8,1,0.004000,false,a1',
+      "run-2,2026-04-11T15:03:00Z,meter-b,8,1,0.001000,maybe,a2",
+    ].join("\r\n");
+    const opened = openLog("multiline.csv", text, []);
+    assert.equal(opened.rows.length, 2);
+    assert.equal(opened.rows[0]?.rowNumber, 2);
+    assert.equal(opened.rows[0]?.model, "line one\n# not a comment\nline two, still the model");
+    assert.equal(opened.rows[0]?.included, true);
+    assert.equal(opened.rows[0]?.resolvedCostMicro, 4000);
+    assert.equal(opened.rows[1]?.rowNumber, 5);
+    assert.equal(opened.rows[1]?.included, false);
+    assert.ok(opened.rows[1]?.errors.some((issue) => issue.field === "success" && issue.rowNumber === 5));
+    const summary = summarizeAttempts(opened.rows);
+    assert.equal(summary.pricedAttempts, 1);
+    assert.equal(summary.spendMicro, 4000);
+    assert.equal(summary.flaggedRows, 1);
+    assert.deepEqual(summary.flaggedRowNumbers, [5]);
+  });
+
+  it("keeps commas and doubled quotes inside fields", () => {
+    const text = [
+      "run_id,timestamp,model,input_tokens,output_tokens,cost_usd,success,retry_of,attempt_id",
+      '"run,1",2026-04-11T15:00:00Z,"meter ""a""",100,10,0.005500,false,"id,0","a,1"',
+      '"run,1",2026-04-11T15:01:00Z,"meter ""a""",100,10,0.002500,true,"a,1","a,2"',
+    ].join("\n");
+    const opened = openLog("commas.csv", text, []);
+    assert.equal(opened.rows.length, 2);
+    assert.equal(opened.rows[0]?.runId, "run,1");
+    assert.equal(opened.rows[0]?.model, 'meter "a"');
+    assert.equal(opened.rows[0]?.attemptId, "a,1");
+    assert.equal(opened.rows[0]?.retryOf, "id,0");
+    assert.equal(opened.rows[1]?.retryOf, "a,1");
+    assert.equal(opened.rows.every((row) => row.included), true);
+    const summary = summarizeAttempts(opened.rows);
+    assert.equal(summary.pricedAttempts, 2);
+    assert.equal(summary.spendMicro, 8000);
+    assert.equal(summary.completions, 1);
+    assert.equal(summary.retryAttempts, 2);
+    assert.equal(summary.retrySpendMicro, 8000);
+    assert.equal(summary.flaggedRows, 0);
+  });
+});
+
+describe("large synthetic log", () => {
+  it("bills every generated row and still flags the bad one", () => {
+    const count = 10_000;
+    const lines = ["run_id,timestamp,model,input_tokens,output_tokens,cost_usd,success,attempt_id"];
+    for (let index = 0; index < count; index += 1) {
+      if (index === 4_999) {
+        lines.push(",2026-04-11T15:00:00Z,meter-a,10,1,0.001000,true,bad");
+        continue;
+      }
+      lines.push(`run-${index},2026-04-11T15:00:00Z,meter-a,10,1,0.001000,true,a${index}`);
+    }
+    const opened = openLog("large.csv", lines.join("\n"), []);
+    assert.equal(opened.rows.length, count);
+    const summary = summarizeAttempts(opened.rows);
+    assert.equal(summary.pricedAttempts, count - 1);
+    assert.equal(summary.flaggedRows, 1);
+    assert.deepEqual(summary.flaggedRowNumbers, [5001]);
+    assert.equal(summary.spendMicro, (count - 1) * 1000);
+    assert.equal(summary.completions, count - 1);
+    assert.equal(opened.rows.filter((row) => row.included).length, count - 1);
+  });
+});

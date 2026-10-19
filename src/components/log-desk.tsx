@@ -25,7 +25,17 @@ import {
   type PriceRate,
 } from "@/lib/attempt-log";
 import { formatMicro, formatShare, formatTokens, formatWall, formatWhen } from "@/lib/format";
-import { clearImport, readImport, saveImport, savePrices, saveSampleData, serverImport, subscribeImport } from "@/lib/log-store";
+import {
+  PERSIST_LIMIT_BYTES,
+  clearImport,
+  formatByteSize,
+  readImport,
+  saveImport,
+  savePrices,
+  saveSampleData,
+  serverImport,
+  subscribeImport,
+} from "@/lib/log-store";
 
 export function LogDesk() {
   const stored = useSyncExternalStore(subscribeImport, readImport, serverImport);
@@ -103,7 +113,11 @@ export function LogDesk() {
       </header>
 
       {stored.note || readError ? (
-        <p role="status" className="mt-3 shrink-0 rounded-lg border border-retry/50 px-3 py-2 text-sm">
+        <p
+          role="status"
+          data-testid="persist-notice"
+          className="mt-3 shrink-0 rounded-lg border border-retry/50 px-3 py-2 text-sm"
+        >
           {readError ?? stored.note}
         </p>
       ) : null}
@@ -170,7 +184,8 @@ function ImportBar({
   inputRef: RefObject<HTMLInputElement | null>;
 }) {
   return (
-    <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2">
+    <div className="mt-4 shrink-0">
+    <div className="flex flex-wrap items-center gap-2">
       <input
         ref={inputRef}
         data-testid="import-file"
@@ -200,6 +215,11 @@ function ImportBar({
       <DownloadLink href="/templates/attempt-log-template.json" label="Template JSON" />
       <DownloadLink href="/samples/sample-agent-log.csv" label="Sample CSV" />
       <DownloadLink href="/samples/sample-agent-log.json" label="Sample JSON" />
+    </div>
+      <p data-testid="persist-limit" className="mt-2 max-w-3xl text-xs leading-5 text-muted-foreground">
+        Logs up to {formatByteSize(PERSIST_LIMIT_BYTES)} ({PERSIST_LIMIT_BYTES.toLocaleString("en-US")} bytes) are
+        saved in this browser. A larger file still loads in this tab and is cleared on reload.
+      </p>
     </div>
   );
 }

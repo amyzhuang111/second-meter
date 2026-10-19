@@ -2,6 +2,14 @@ import { SAMPLE_PRICE_TABLE, openLog, type PriceRate } from "./attempt-log";
 
 export const IMPORT_KEY = "second-meter-import-v1";
 
+/**
+ * Raw file text above this size is not written to localStorage.
+ * Browsers commonly allow about 5 MB for the whole origin, and the saved value
+ * is JSON around the file text, so 1.5 MB of file text stays under that quota
+ * with room for the rest of this origin.
+ */
+export const PERSIST_LIMIT_BYTES = 1_500_000;
+
 const IMPORT_EVENT = "second-meter-import";
 const BLOCKED = "This browser blocked local storage. The imported log lasts for this tab only.";
 
@@ -26,6 +34,33 @@ export const EMPTY_IMPORT: ImportSnapshot = {
 let clientRaw: string | null | undefined;
 let clientSnapshot: ImportSnapshot = EMPTY_IMPORT;
 let storageBlocked = false;
+let memoryOnly = false;
+
+export function formatByteSize(bytes: number): string {
+  if (bytes < 1_000) return `${bytes} bytes`;
+  if (bytes < 1_000_000) {
+    const kb = bytes / 1_000;
+    return `${kb.toFixed(kb >= 10 ? 0 : 1)} KB`;
+  }
+  return `${(bytes / 1_000_000).toFixed(1)} MB`;
+}
+
+export function unsavedLogNotice(bytes: number, reason: "limit" | "quota"): string {
+  const size = formatByteSize(bytes);
+  const limit = `${formatByteSize(PERSIST_LIMIT_BYTES)} (${groupDigits(PERSIST_LIMIT_BYTES)} bytes)`;
+  if (reason === "limit") {
+    return `This log is ${size}, over the ${limit} save limit. Every row still counts in the rates. It stays in this tab and is not written to browser storage. A reload clears it.`;
+  }
+  return `This browser refused to save this ${size} log (storage quota). The app limit is ${limit}. Every row still counts in the rates. It stays in this tab and is not written to browser storage. A reload clears it.`;
+}
+
+export function utf8Bytes(text: string): number {
+  return new TextEncoder().encode(text).length;
+}
+
+function groupDigits(bytes: number): string {
+  return bytes.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
 
 export function subscribeImport(onChange: () => void): () => void {
   window.addEventListener(IMPORT_EVENT, onChange);
@@ -37,7 +72,7 @@ export function subscribeImport(onChange: () => void): () => void {
 }
 
 export function readImport(): ImportSnapshot {
-  if (storageBlocked) return clientSnapshot;
+  if (memoryOnly || storageBlocked) return clientSnapshot;
   try {
     const raw = localStorage.getItem(IMPORT_KEY);
     if (clientRaw === raw) return clientSnapshot;
@@ -83,19 +118,46 @@ export function clearImport(): void {
 }
 
 function commit(snapshot: ImportSnapshot): void {
+  const bytes = snapshot.text == null ? 0 : utf8Bytes(snapshot.text);
+  if (snapshot.text != null && bytes > PERSIST_LIMIT_BYTES) {
+    keepInMemory(snapshot, unsavedLogNotice(bytes, "limit"));
+    return;
+  }
   const stored = { ...snapshot, note: null };
   const raw = JSON.stringify({ version: 1, ...stored });
   try {
     localStorage.setItem(IMPORT_KEY, raw);
     storageBlocked = false;
+    memoryOnly = false;
     clientRaw = raw;
     clientSnapshot = stored;
   } catch {
-    storageBlocked = true;
-    clientRaw = raw;
-    clientSnapshot = { ...stored, note: BLOCKED };
+    keepInMemory(snapshot, unsavedLogNotice(bytes, "quota"));
+    return;
   }
   window.dispatchEvent(new Event(IMPORT_EVENT));
+}
+
+function keepInMemory(snapshot: ImportSnapshot, note: string): void {
+  memoryOnly = true;
+  storageBlocked = false;
+  clientRaw = null;
+  clientSnapshot = { ...snapshot, note };
+  try {
+    localStorage.removeItem(IMPORT_KEY);
+  } catch {
+    storageBlocked = true;
+    clientSnapshot = { ...clientSnapshot, note: `${note} ${BLOCKED}` };
+  }
+  window.dispatchEvent(new Event(IMPORT_EVENT));
+}
+
+/** Test hook. Production code does not call this. */
+export function resetImportStateForTests(): void {
+  clientRaw = undefined;
+  clientSnapshot = EMPTY_IMPORT;
+  storageBlocked = false;
+  memoryOnly = false;
 }
 
 function decode(raw: string): ImportSnapshot {

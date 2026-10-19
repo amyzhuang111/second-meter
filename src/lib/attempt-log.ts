@@ -392,13 +392,7 @@ function parseBody(
 
 function parseCsvLog(filename: string, text: string) {
   const marked = sampleMark(filename, text, undefined);
-  const physical = text.split(/\r?\n/);
-  const records: { line: number; cells: string[] }[] = [];
-  for (let index = 0; index < physical.length; index += 1) {
-    const line = physical[index] ?? "";
-    if (line.trim() === "" || line.trim().startsWith("#")) continue;
-    records.push({ line: index + 1, cells: splitCsvLine(line) });
-  }
+  const records = parseCsvRecords(text);
   if (records.length === 0) {
     return {
       ...marked,
@@ -717,38 +711,89 @@ function normalizeHeader(value: string): string {
   return value.trim().toLowerCase().replace(/[\s-]+/g, "_");
 }
 
-function splitCsvLine(line: string): string[] {
-  const cells: string[] = [];
-  let cell = "";
-  let quoted = false;
-  for (let i = 0; i < line.length; i += 1) {
-    const char = line[i];
-    if (quoted) {
-      if (char === '"') {
-        if (line[i + 1] === '"') {
-          cell += '"';
-          i += 1;
-        } else {
-          quoted = false;
+/**
+ * RFC-style records. Quoted fields may contain commas, quotes (""), and line
+ * breaks. Record separators are LF, CR, or CRLF. A row number is the file line
+ * where that record starts. Comment lines (#) and blank lines are not records,
+ * and they still advance the line count.
+ */
+function parseCsvRecords(text: string): { line: number; cells: string[] }[] {
+  const records: { line: number; cells: string[] }[] = [];
+  const length = text.length;
+  let index = 0;
+  let line = 1;
+
+  const consumeBreak = () => {
+    if (text[index] === "\r" && text[index + 1] === "\n") index += 2;
+    else index += 1;
+    line += 1;
+  };
+
+  while (index < length) {
+    let look = index;
+    while (text[look] === " " || text[look] === "\t") look += 1;
+    const peeked = text[look];
+    if (peeked === undefined) break;
+    if (peeked === "#" || peeked === "\n" || peeked === "\r") {
+      while (index < length && text[index] !== "\n" && text[index] !== "\r") index += 1;
+      if (index < length) consumeBreak();
+      continue;
+    }
+
+    const recordLine = line;
+    const cells: string[] = [];
+    let cell = "";
+    let inQuotes = false;
+    let closed = false;
+
+    while (index < length) {
+      const char = text[index];
+      if (inQuotes) {
+        if (char === '"') {
+          if (text[index + 1] === '"') {
+            cell += '"';
+            index += 2;
+            continue;
+          }
+          inQuotes = false;
+          index += 1;
+          continue;
         }
-      } else {
+        if (char === "\n" || char === "\r") {
+          cell += "\n";
+          consumeBreak();
+          continue;
+        }
         cell += char;
+        index += 1;
+        continue;
       }
-      continue;
+      if (char === '"' && cell.length === 0) {
+        inQuotes = true;
+        index += 1;
+        continue;
+      }
+      if (char === ",") {
+        cells.push(cell);
+        cell = "";
+        index += 1;
+        continue;
+      }
+      if (char === "\n" || char === "\r") {
+        cells.push(cell);
+        consumeBreak();
+        closed = true;
+        break;
+      }
+      cell += char;
+      index += 1;
     }
-    if (char === '"') {
-      quoted = true;
-      continue;
-    }
-    if (char === ",") {
-      cells.push(cell);
-      cell = "";
-      continue;
-    }
-    cell += char;
+
+    if (!closed) cells.push(cell);
+    records.push({ line: recordLine, cells });
   }
-  cells.push(cell);
-  return cells;
+
+  return records;
 }
 
 function csvCell(value: string): string {

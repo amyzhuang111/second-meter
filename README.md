@@ -37,9 +37,9 @@ Use **Import CSV or JSON**, or download a template and fill it in.
 | `latency_ms` | no | Non-negative integer. |
 | `attempt_id` | no | Stable id for `retry_of`. Blank cells become `row-<line>`. |
 
-Row numbers are file line numbers for CSV (the header counts) and 1-based positions in the JSON `rows` array. A bad row is listed by that number and left out of the rates. It is not dropped from the ledger.
+Row numbers are file line numbers for CSV (the header counts; a quoted field that spans lines keeps the line where that record starts) and 1-based positions in the JSON `rows` array. Quoted fields may contain commas and line breaks. A bad row is listed by that number and left out of the rates. It is not dropped from the ledger.
 
-The log, the price table, and the sample-data switch are stored in `localStorage` under `second-meter-import-v1`. **Remove log** clears the file. **Export summary JSON** and **Export summary CSV** download a review you can attach elsewhere.
+The log, the price table, and the sample-data switch are stored in `localStorage` under `second-meter-import-v1` when the file text is at most 1.5 MB (1,500,000 bytes). A larger log still loads and is still billed, with a notice that it stays in this tab only. **Remove log** clears the file. **Export summary JSON** and **Export summary CSV** download a review you can attach elsewhere.
 
 ```
 total spend = sum of priced rows

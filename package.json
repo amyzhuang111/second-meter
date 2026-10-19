@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start --hostname 0.0.0.0 --port 41731",
     "lint": "eslint",
-    "test": "node --import tsx --test src/lib/meter.test.ts src/lib/attempt-log.test.ts src/components/ui/button.test.ts"
+    "test": "node --import tsx --test src/lib/meter.test.ts src/lib/attempt-log.test.ts src/lib/log-store.test.ts src/components/ui/button.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
