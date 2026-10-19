@@ -1,0 +1,150 @@
+{
+  "label": "sample",
+  "notice": "Sample import file. These numbers are not real.",
+  "rows": [
+    {
+      "run_id": "run-1",
+      "timestamp": "2026-04-11T15:00:00Z",
+      "model": "meter-a",
+      "input_tokens": 1000,
+      "output_tokens": 100,
+      "cost_usd": "0.004500",
+      "success": false,
+      "retry_of": "",
+      "latency_ms": 800,
+      "attempt_id": "a1"
+    },
+    {
+      "run_id": "run-1",
+      "timestamp": "2026-04-11T15:01:00Z",
+      "model": "meter-a",
+      "input_tokens": 1200,
+      "output_tokens": 80,
+      "cost_usd": null,
+      "success": true,
+      "retry_of": "a1",
+      "latency_ms": 900,
+      "attempt_id": "a2"
+    },
+    {
+      "run_id": "run-2",
+      "timestamp": "2026-04-11T15:02:00Z",
+      "model": "meter-b",
+      "input_tokens": 2000,
+      "output_tokens": 200,
+      "cost_usd": "0.003000",
+      "success": true,
+      "retry_of": "",
+      "latency_ms": 700,
+      "attempt_id": "a3"
+    },
+    {
+      "run_id": "run-3",
+      "timestamp": "2026-04-11T15:03:00Z",
+      "model": "meter-a",
+      "input_tokens": 800,
+      "output_tokens": 50,
+      "cost_usd": "0.003150",
+      "success": false,
+      "retry_of": "",
+      "latency_ms": 600,
+      "attempt_id": "a4"
+    },
+    {
+      "run_id": "run-3",
+      "timestamp": "2026-04-11T15:04:00Z",
+      "model": "meter-a",
+      "input_tokens": 900,
+      "output_tokens": 60,
+      "cost_usd": "0.003600",
+      "success": false,
+      "retry_of": "a4",
+      "latency_ms": 650,
+      "attempt_id": "a5"
+    },
+    {
+      "run_id": "run-4",
+      "timestamp": "2026-04-11T15:05:00Z",
+      "model": "meter-b",
+      "input_tokens": 1500,
+      "output_tokens": 100,
+      "cost_usd": null,
+      "success": true,
+      "retry_of": "",
+      "latency_ms": 500,
+      "attempt_id": "a6"
+    },
+    {
+      "run_id": "run-5",
+      "timestamp": "2026-04-11T15:06:00Z",
+      "model": "meter-a",
+      "input_tokens": 1100,
+      "output_tokens": 90,
+      "cost_usd": "0.004650",
+      "success": true,
+      "retry_of": "",
+      "latency_ms": 720,
+      "attempt_id": "a7"
+    },
+    {
+      "run_id": "run-6",
+      "timestamp": "2026-04-11T15:07:00Z",
+      "model": "meter-b",
+      "input_tokens": 1800,
+      "output_tokens": 120,
+      "cost_usd": "0.002400",
+      "success": false,
+      "retry_of": "",
+      "latency_ms": 640,
+      "attempt_id": "a8"
+    },
+    {
+      "run_id": "run-6",
+      "timestamp": "2026-04-11T15:08:00Z",
+      "model": "meter-b",
+      "input_tokens": 1600,
+      "output_tokens": 110,
+      "cost_usd": "0.002150",
+      "success": true,
+      "retry_of": "a8",
+      "latency_ms": 610,
+      "attempt_id": "a9"
+    },
+    {
+      "run_id": "run-7",
+      "timestamp": "2026-04-11T15:09:00Z",
+      "model": "meter-a",
+      "input_tokens": 700,
+      "output_tokens": 40,
+      "cost_usd": "0.002700",
+      "success": true,
+      "retry_of": "",
+      "latency_ms": 430,
+      "attempt_id": "a10"
+    },
+    {
+      "run_id": "run-8",
+      "timestamp": "2026-04-11T15:10:00Z",
+      "model": "meter-b",
+      "input_tokens": 1300,
+      "output_tokens": 70,
+      "cost_usd": "0.001650",
+      "success": false,
+      "retry_of": "",
+      "latency_ms": 410,
+      "attempt_id": "a11"
+    },
+    {
+      "run_id": "",
+      "timestamp": "2026-04-11T15:11:00Z",
+      "model": "meter-a",
+      "input_tokens": 100,
+      "output_tokens": 20,
+      "cost_usd": "0.001000",
+      "success": "maybe",
+      "retry_of": "",
+      "latency_ms": 400,
+      "attempt_id": "bad-1"
+    }
+  ]
+}

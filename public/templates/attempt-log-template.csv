@@ -1,0 +1,2 @@
+# cost_usd may be blank. Blank cells use the price table. retry_of is an attempt_id from this file. latency_ms and attempt_id are optional.
+run_id,timestamp,model,input_tokens,output_tokens,cost_usd,success,retry_of,latency_ms,attempt_id
